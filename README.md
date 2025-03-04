@@ -9,8 +9,7 @@ A Python tool for recording HeyGen avatar sessions using the LiveKit API. This t
 1. **Create a Python virtual environment** (Python 3.10 recommended):
 
 ```bash
-# Create a directory for your project
-mkdir heygen-livekit-recorder
+# Clone this repo
 cd heygen-livekit-recorder
 
 # Create a virtual environment
@@ -19,15 +18,13 @@ python3.10 -m venv livekit-env-py310
 # Activate the virtual environment
 # On macOS/Linux:
 source livekit-env-py310/bin/activate
-# On Windows:
-# livekit-env-py310\Scripts\activate
 ```
 
 2. **Install the required packages**:
 
 ```bash
 pip install --upgrade pip
-pip install numpy opencv-python requests websocket-client livekit-client
+pip install numpy opencv-python requests websocket-client livekit
 ```
 
 ### Required Dependencies
@@ -38,21 +35,11 @@ pip install numpy opencv-python requests websocket-client livekit-client
   ```bash
   # macOS (with Homebrew)
   brew install ffmpeg
-
-  # Ubuntu/Debian
-  sudo apt-get install ffmpeg
-
-  # Windows
-  # Download from https://ffmpeg.org/download.html#build-windows
   ```
 
 ## Usage
 
-1. **Save the script** to a file named `heygen_livekit_pubsub.py`
-
-2. **Prepare an input audio file** (WAV format is recommended)
-
-3. **Run the script** with your HeyGen API key:
+ **Run the script** with your HeyGen API key:
 
 ```bash
 python heygen_livekit_pubsub.py --api-key "YOUR_HEYGEN_API_KEY" --wav-file "input.wav"
