@@ -364,7 +364,8 @@ class HeyGenRecorder:
                     # Create agent.speak event - exactly as in the sample
                     audio_base64 = base64.b64encode(chunk).decode('utf-8')
                     audio_event = {
-                        "type": "agent.speak",
+                        #"type": "agent.speak",
+                        "type": "agent.audio_buffer_append",                        
                         "audio": audio_base64,
                         "event_id": chunk_event_id
                     }
@@ -422,7 +423,8 @@ class HeyGenRecorder:
                 
                 # Send agent.speak_end event with a fresh UUID
                 end_event = {
-                    "type": "agent.speak_end",
+                    #"type": "agent.speak_end",
+                    "type": "agent.audio_buffer_commit",                    
                     "event_id": last_event_id
                 }
                 
