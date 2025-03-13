@@ -88,7 +88,7 @@ class HeyGenRecorder:
             
     def get_heygen_token(self):
         """Get authentication token from HeyGen API"""
-        logger.info("Getting HeyGen authentication token...")
+        logger.info("Hi! Getting HeyGen authentication token...")
         
         url = "https://api.heygen.com/v1/streaming.create_token"
         headers = {
@@ -364,8 +364,8 @@ class HeyGenRecorder:
                     # Create agent.speak event - exactly as in the sample
                     audio_base64 = base64.b64encode(chunk).decode('utf-8')
                     audio_event = {
-                        #"type": "agent.speak",
-                        "type": "agent.audio_buffer_append",                        
+                        "type": "agent.speak",
+                        #"type": "agent.audio_buffer_append",                        
                         "audio": audio_base64,
                         "event_id": chunk_event_id
                     }
@@ -423,8 +423,8 @@ class HeyGenRecorder:
                 
                 # Send agent.speak_end event with a fresh UUID
                 end_event = {
-                    #"type": "agent.speak_end",
-                    "type": "agent.audio_buffer_commit",                    
+                    "type": "agent.speak_end",
+                    #"type": "agent.audio_buffer_commit",                    
                     "event_id": last_event_id
                 }
                 
@@ -711,6 +711,8 @@ async def main():
         # Create streaming session
         livekit_url, livekit_token = recorder.create_streaming_session(heygen_token)
         
+        time.sleep(3)
+
         # Start streaming session
         recorder.start_streaming_session(heygen_token)
         
