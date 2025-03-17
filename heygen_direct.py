@@ -33,14 +33,16 @@ from aiortc.rtp import RtpPacket
 #####################
 # GStreamer imports (if using --enable-gs)
 #####################
+
 try:
     import gi
     gi.require_version('Gst', '1.0')
-    from gi.repository import Gst, GLib
+    from gi.repository import Gst
     GST_AVAILABLE = True
-except ImportError:
+    print("GStreamer successfully imported!")
+except ImportError as e:
+    print(f"GStreamer import error: {e}")
     GST_AVAILABLE = False
-
 
 #####################
 # Reassemblers

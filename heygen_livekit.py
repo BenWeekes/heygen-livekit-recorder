@@ -18,7 +18,7 @@ import subprocess
 import base64
 import uuid
 import cv2
-import ctypes  # needed for GStreamer buffer operations
+import ctypes  # needed for GStreamer buffer ops
 from datetime import datetime
 from signal import SIGINT, SIGTERM
 
@@ -158,7 +158,7 @@ class HeyGenDualRecorder:
         self.gs_audio_running = False
 
     # -------------------------------------------------------------------------
-    #                 HELPER METHODS FROM YOUR SECOND SCRIPT
+    #                 HELPER METHODS
     # -------------------------------------------------------------------------
     def get_heygen_token(self):
         """
@@ -315,8 +315,7 @@ class HeyGenDualRecorder:
     def send_audio_to_websocket(self):
         """
         Sends audio data from the prepared WAV file in small chunks
-        to the HeyGen WebSocket. Based on your second snippet's
-        chunk-based approach.
+        to the HeyGen WebSocket.
         """
         if not self.ws:
             logger.error("WebSocket connection not established; cannot send audio.")
@@ -653,7 +652,6 @@ class HeyGenDualRecorder:
         
         if self.enable_gs:
             # GStreamer pipeline for video
-            # For example: appsrc -> videoconvert -> x264enc -> agorasink
             pipeline_desc = f"""
             appsrc name=video_appsrc ! videoconvert ! x264enc key-int-max=60 tune=zerolatency ! agorasink appid={self.gs_appid} channel={self.gs_channel}
             """
@@ -673,10 +671,6 @@ class HeyGenDualRecorder:
             pass
         
         try:
-            if not self.enable_gs:
-                # open once; append raw frames
-                pass  # We'll open/append inside the loop or just open in "ab"
-            
             async for frame_event in video_stream:
                 buffer = frame_event.frame
                 arr = np.frombuffer(buffer.data, dtype=np.uint8)
@@ -690,17 +684,22 @@ class HeyGenDualRecorder:
                 frame_count += 1
                 
                 if self.enable_gs and self.gs_video_running:
-                    gstbuf = Gst.Buffer.new_allocate(None, arr.size, None)
-                    gstmap = gstbuf.map(Gst.MapFlags.WRITE)
-                    ctypes.memmove(gstmap.data, arr.ctypes.data, arr.nbytes)
-                    gstbuf.unmap(gstmap)
+                    # Create new buffer
+                    gstbuf = Gst.Buffer.new_allocate(None, arr.nbytes, None)
+                    ret, mapinfo = gstbuf.map(Gst.MapFlags.WRITE)
+                    if ret:
+                        ctypes.memmove(mapinfo.data, arr.ctypes.data, arr.nbytes)
+                        gstbuf.unmap(mapinfo)
+                        
+                        # Timestamp
+                        gstbuf.pts = gstbuf.dts = int(frame_count * Gst.SECOND / self.fps)
+                        
+                        flow_ret = self.gs_video_appsrc.emit("push-buffer", gstbuf)
+                        if flow_ret != Gst.FlowReturn.OK:
+                            logger.warning(f"Video push-buffer flow_return={flow_ret}")
+                    else:
+                        logger.error("Failed to map video buffer for writing.")
                     
-                    # Timestamps
-                    gstbuf.pts = gstbuf.dts = int(frame_count * Gst.SECOND / self.fps)
-                    
-                    ret = self.gs_video_appsrc.emit("push-buffer", gstbuf)
-                    if ret != Gst.FlowReturn.OK:
-                        logger.warning(f"Video push-buffer flow_return={ret}")
                 else:
                     # Append to .yuv file
                     with open(self.video_file_path, 'ab') as vf:
@@ -756,27 +755,28 @@ class HeyGenDualRecorder:
                     continue
                 
                 if self.enable_gs and self.gs_audio_running:
-                    # Convert to bytes
                     arr = np.array(aframe.data, dtype=np.int16)
-                    raw_bytes = arr.tobytes()
                     
-                    gstbuf = Gst.Buffer.new_allocate(None, len(raw_bytes), None)
-                    gstmap = gstbuf.map(Gst.MapFlags.WRITE)
-                    ctypes.memmove(gstmap.data, raw_bytes, len(raw_bytes))
-                    gstbuf.unmap(gstmap)
-                    
-                    sample_count += len(arr)
-                    pts_ns = int(sample_count * Gst.SECOND / sample_rate)
-                    gstbuf.pts = pts_ns
-                    gstbuf.dts = pts_ns
-                    
-                    ret = self.gs_audio_appsrc.emit("push-buffer", gstbuf)
-                    if ret != Gst.FlowReturn.OK:
-                        logger.warning(f"Audio push-buffer flow_return={ret}")
+                    gstbuf = Gst.Buffer.new_allocate(None, arr.nbytes, None)
+                    ret, mapinfo = gstbuf.map(Gst.MapFlags.WRITE)
+                    if ret:
+                        ctypes.memmove(mapinfo.data, arr.ctypes.data, arr.nbytes)
+                        gstbuf.unmap(mapinfo)
+                        
+                        # Provide a PTS
+                        sample_count += len(arr)
+                        pts_ns = int(sample_count * Gst.SECOND / sample_rate)
+                        gstbuf.pts = pts_ns
+                        gstbuf.dts = pts_ns
+                        
+                        flow_ret = self.gs_audio_appsrc.emit("push-buffer", gstbuf)
+                        if flow_ret != Gst.FlowReturn.OK:
+                            logger.warning(f"Audio push-buffer flow_return={flow_ret}")
+                    else:
+                        logger.error("Failed to map audio buffer for writing.")
                     
                 else:
                     # Append to local WAV
-                    # We'll open for append each time to avoid concurrency issues
                     with wave.open(self.wav_output_path, 'ab') as wf:
                         for sample in aframe.data:
                             clamped = max(min(sample, 32767), -32768)
@@ -802,7 +802,6 @@ class HeyGenDualRecorder:
                     self.gs_audio_pipeline.set_state(Gst.State.NULL)
                     self.gs_audio_running = False
             else:
-                # nothing special – local WAV is appended in the loop
                 pass
 
 
@@ -859,7 +858,6 @@ async def main():
         return 1
     
     # figure out a maximum overall timeout in case it stalls
-    # (input_wav_duration + buffer from the recorder itself) => but let's just do 300s
     try:
         await asyncio.wait_for(recorder.record(livekit_url, livekit_token), timeout=300)
         logger.info("Done recording!")
@@ -895,3 +893,4 @@ if __name__ == "__main__":
     finally:
         loop.run_until_complete(graceful_shutdown())
         loop.close()
+
