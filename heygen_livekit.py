@@ -491,15 +491,9 @@ async def main():
         channel=args.channel
     )
     
-    # For brevity, we skip showing the full token + session creation code. Let's mock:
-    heygen_token = "FAKE_TOKEN"
-    livekit_url = "FAKE_URL"
-    livekit_token = "FAKE_LK_TOKEN"
-    
-    # In real usage:
-    # heygen_token = recorder.get_heygen_token()
-    # livekit_url, livekit_token = recorder.create_streaming_session(heygen_token)
-    # recorder.start_streaming_session(heygen_token)
+    heygen_token = recorder.get_heygen_token()
+    livekit_url, livekit_token = recorder.create_streaming_session(heygen_token)
+    recorder.start_streaming_session(heygen_token)
     
     # Then do recorder.record
     try:
